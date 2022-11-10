@@ -1,4 +1,4 @@
-from asn1crypto import cms, x509
+from asn1crypto import cms, x509, core
 from collections import OrderedDict
 from cryptography.hazmat.primitives.hashes import SHA224
 
@@ -20,10 +20,22 @@ class CMSSignedData:
         for der_encoded_cert in der_encoded_certs:
             certs.append(x509.Certificate.load(der_encoded_cert))
         self.singed_data['certificates'] = certs
-        key_id = certs[0].key_identifier_value.native
-        signature_algorithm = certs[0].native['signature_algorithm']['algorithm']
-        self.signer_info['sid'] = cms.SignerIdentifier({
-            'subject_key_identifier': key_id})
+        signing_cert = certs[0]
+        signature_algorithm = signing_cert.native['signature_algorithm']['algorithm']
+        issuer = signing_cert.native['tbs_certificate']['issuer']
+        ias = cms.IssuerAndSerialNumber()
+        ias['serial_number'] = signing_cert.native['tbs_certificate']['serial_number']
+        ias['issuer'] = x509.Name.build(OrderedDict([
+            ('country_name', issuer['country_name']),
+            ('state_or_province_name', issuer['state_or_province_name']),
+            ('organization_name', issuer['organization_name']),
+            ('organizational_unit_name', issuer['organizational_unit_name']),
+            ('common_name', issuer['common_name']),
+            ('email_address', issuer['email_address']),
+        ]), use_printable=True)
+        sid = cms.SignerIdentifier(name='issuer_and_serial_number', value=ias)
+        self.signer_info['sid'] = sid
+
         self.signer_info['signature_algorithm'] = OrderedDict([
                 ('algorithm', signature_algorithm),
                 ('parameters', None)
@@ -31,6 +43,18 @@ class CMSSignedData:
 
     def set_signature(self, signature: bytes):
         self.signer_info['signature'] = signature
+
+    def set_signed_attrs(self, digest: bytes):
+        self.signer_info['signed_attrs'] = [
+            OrderedDict([
+                ('type', 'content_type'),
+                ('values', ['data'])
+            ]),
+            OrderedDict([
+                ('type', 'message_digest'),
+                ('values', [digest])
+            ])
+        ]
 
     def set_digest_algorithms(self, name: str):
         self.singed_data['digest_algorithms'] = [OrderedDict([
@@ -48,8 +72,8 @@ class CMSSignedData:
         return self.asn1obj.dump()
 
     def __set_version(self):
-        self.singed_data['version'] = 'v0'
-        self.signer_info['version'] = 'v0'
+        self.singed_data['version'] = 'v1'
+        self.signer_info['version'] = 'v1'
 
     def __set_encap_content_info(self):
         self.singed_data['encap_content_info'] = OrderedDict([

@@ -80,11 +80,11 @@ class PDFWriter:
 
     def save(self):
         if self.in_place:
-            self.doc.save(self.file_name)
+            self.doc.save(self.file_name, normalize_content=False, static_id=True)
             return self.file_name
         else:
             out_file_name = self.file_name[:-4] + '_signed.pdf'
-            self.doc.save(out_file_name, normalize_content=False)
+            self.doc.save(out_file_name, normalize_content=False, static_id=True)
             return out_file_name
 
     def create_sig_dict(self):

@@ -27,7 +27,7 @@ def find_sig_dict_byte_pos(file_name: str):
                     elif line[i] == ord(']'):
                         byte_range_end = ctr + i
                     elif line[i] == ord('<'):
-                        contents_start = ctr + i + 1
+                        contents_start = ctr + i
                         return byte_range_start, byte_range_end, contents_start
             else:
                 ctr += len(line)
