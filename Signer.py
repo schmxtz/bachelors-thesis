@@ -1,11 +1,12 @@
 import pikepdf
 from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, KeySerializationEncryption
 from cryptography.hazmat.primitives.asymmetric import padding, utils
+from cryptography.hazmat.primitives import hashes
 from CMSSignedData import CMSSignedData
 from PDFWriter import PDFWriter
 from utils.Files import find_sig_dict_byte_pos
 import os, mmap
-from cryptography.hazmat.primitives import hashes
+
 
 CONTENTS_PADDING = 10000
 HASHING_ALGO = 'sha256'
@@ -57,23 +58,23 @@ class Signer:
             with open(output_file_name, 'r+b') as f:
                 m = mmap.mmap(f.fileno(), 0)
                 m[byte_start:byte_end] = byte_range
+                m.flush()
 
             # Calculate hash of file over given ByteRange
             file_hash = self.calculate_hash(file_name=output_file_name, hash_algo=HASHING_ALGO)
-            cms.set_signed_attrs(digest=file_hash)
+            cms.set_signed_attrs(digest=file_hash, privkey=self.private_key)
 
             # Calculate signature from hash and private key
-            signature = self.private_key.sign(data=file_hash, padding=padding.PKCS1v15(), algorithm=hashes.SHA256())
+            # signature = self.private_key.sign(data=file_hash, padding=padding.PKCS1v15(), algorithm=hashes.SHA256())
 
-            cms.set_signature(signature)
-            cms_dump = cms.dump().hex().encode('utf-8')
+            # cms.set_signature(signature)
+            cms_dump = cms.dump().hex().encode('ascii')
 
             # Replace part of the /Contents entry with the correct cms-object
             with open(output_file_name, 'r+b') as f:
                 m = mmap.mmap(f.fileno(), 0)
                 m[contents_start + 1:contents_start + len(cms_dump) + 1] = cms_dump
-                m.close()
-                f.close()
+                m.flush()
 
     def calculate_hash(self, file_name: str, hash_algo: str):
         if hash_algo == 'sha256':

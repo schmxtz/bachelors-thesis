@@ -84,7 +84,7 @@ class PDFWriter:
             return self.file_name
         else:
             out_file_name = self.file_name[:-4] + '_signed.pdf'
-            self.doc.save(out_file_name, normalize_content=False, static_id=True)
+            self.doc.save(out_file_name, normalize_content=False, static_id=True, deterministic_id=True)
             return out_file_name
 
     def create_sig_dict(self):
@@ -109,11 +109,23 @@ class PDFWriter:
                 '/Type': pikepdf.Name('/Annot'),
                 '/SubType': pikepdf.Name('/Widget'),
                 '/FT': pikepdf.Name('/Sig'),
-                '/Rect': self.sig_pos,
+                '/Rect': [0.0, 0.0, 0.0, 0.0],
                 '/V': self.sig_dict_obj,
                 '/T': 'Signature1',
-                '/F': 3,
-                '/P': self.doc.pages[self.page_index].obj
+                '/F': 132,
+                '/P': self.doc.pages[self.page_index].obj,
+                '/AP': pikepdf.Dictionary(
+                    {
+                        '/N': pikepdf.Dictionary(
+                            {
+                                '/Length': 0,
+                                '/Type': pikepdf.Name('/XObject'),
+                                '/Subtype': pikepdf.Name('/Form'),
+                                '/BBox': [0.0, 0.0, 0.0, 0.0]
+                            }
+                        )
+                    }
+                )
             }
         )
         self.annot_dict_obj = self.doc.make_indirect(annot_dict)
