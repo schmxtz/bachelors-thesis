@@ -5,5 +5,5 @@ setup(name='Python PDF signer',
       description='description',
       author='Philipp Schmitz',
       author_email='schmitph@hochschule-trier.de',
-      packages=['pyhanko', 'pikepdf', asn1crypto, cryptography],
+      packages=['pyhanko', 'pikepdf', 'asn1crypto', 'cryptography'],
      )
