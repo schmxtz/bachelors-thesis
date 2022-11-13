@@ -1,3 +1,4 @@
+import openpyxl
 
 
 def find_sig_dict_byte_pos(file_name: str):
@@ -34,3 +35,26 @@ def find_sig_dict_byte_pos(file_name: str):
         raise ValueError('Byte Position of signature cannot be found inside output file.')
 
 
+def parse_excel_file(file_name):
+    workbook = openpyxl.load_workbook(filename=file_name, read_only=True)
+    worksheet = workbook.worksheets[0]
+    rows = worksheet.rows
+
+    parsed_rows = []
+
+    header_row = []
+    for row in rows:
+        # Skip and save first row separately as these are the column names
+        if not header_row:
+            header_row = row
+            continue
+
+        parsed_row = {}
+        for cell in range(len(row)):
+            # Check if cell value is not empty string
+            if row[cell].value:
+                # Store as key-value (placeholder, value) pairs
+                parsed_row[header_row[cell].value] = row[cell].value
+        parsed_rows.append(parsed_row)
+
+    return parsed_rows

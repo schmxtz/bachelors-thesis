@@ -80,11 +80,11 @@ class PDFWriter:
 
     def save(self):
         if self.in_place:
-            self.doc.save(self.file_name, normalize_content=False, static_id=True)
+            self.doc.save(self.file_name, normalize_content=False)
             return self.file_name
         else:
             out_file_name = self.file_name[:-4] + '_signed.pdf'
-            self.doc.save(out_file_name, normalize_content=False, static_id=True, deterministic_id=True)
+            self.doc.save(out_file_name, normalize_content=False)
             return out_file_name
 
     def create_sig_dict(self):
@@ -109,7 +109,7 @@ class PDFWriter:
                 '/Type': pikepdf.Name('/Annot'),
                 '/SubType': pikepdf.Name('/Widget'),
                 '/FT': pikepdf.Name('/Sig'),
-                '/Rect': [0.0, 0.0, 0.0, 0.0],
+                '/Rect': self.sig_pos,
                 '/V': self.sig_dict_obj,
                 '/T': 'Signature1',
                 '/F': 132,
@@ -121,7 +121,7 @@ class PDFWriter:
                                 '/Length': 0,
                                 '/Type': pikepdf.Name('/XObject'),
                                 '/Subtype': pikepdf.Name('/Form'),
-                                '/BBox': [0.0, 0.0, 0.0, 0.0]
+                                '/BBox': self.sig_pos
                             }
                         )
                     }
