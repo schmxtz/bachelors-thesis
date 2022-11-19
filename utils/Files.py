@@ -57,4 +57,4 @@ def parse_excel_file(file_name):
                 parsed_row[header_row[cell].value] = row[cell].value
         parsed_rows.append(parsed_row)
 
-    return parsed_rows
+    return parsed_rows, [header.value for header in header_row]

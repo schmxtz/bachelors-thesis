@@ -1,5 +1,5 @@
 from utils.Files import parse_excel_file
-import time, pikepdf
+import time, pikepdf, itertools
 from pikepdf import Pdf
 
 DEKAN_NAME = 'Prof. Dr. rer. nat. Heinz Schmitz'
@@ -11,7 +11,7 @@ FONT_NAME = '/CIDFont+F1'
 
 class PDFGenerator:
     def __init__(self, template_file_name: str, excel_file_name: str, output_path: str):
-        self.parameters = parse_excel_file(excel_file_name)
+        self.parameters, self.header = parse_excel_file(excel_file_name)
         self.document = Pdf.open(filename_or_stream=template_file_name, allow_overwriting_input=False)
         self.mapping = GlypthToUnicodeMapping()
 
@@ -70,18 +70,17 @@ class PDFGenerator:
         # /ToUnicode entry is a stream object, so we need to parse it
         resource_parsed = pikepdf.parse_content_stream(target_font['/ToUnicode'])
 
-        # Mapping is surrounded by <length> beginbfchar ... endbfchar
-        mapping_index = None
+        # Mapping is surrounded by <length> beginbfchar <glyph> <unicode> ... endbfchar
+        mapping_indices = []
         mapping_obj = None
         for i in range(len(resource_parsed)):
             if resource_parsed[i].operator == pikepdf.Operator('beginbfchar'):
-                mapping_index = i + 1
-                break
-            if resource_parsed[i].operator == pikepdf.Operator('endbfchar'):
-                mapping_index = i
-                break
+                mapping_indices.append(i + 1)
 
-        mapping_obj = resource_parsed[mapping_index].operands
+        # Mapping dict lengths are limited to 100, so there might be more, so we collect them all in one list
+        mapping_obj = list(itertools.chain.from_iterable(
+            [resource_parsed[indices].operands for indices in mapping_indices]
+        ))
 
         # Contains list of <glyph> <unicode> pairs
         if len(mapping_obj) % 2 != 0:
@@ -100,17 +99,49 @@ class PDFGenerator:
         The actual text follows are the Tj operator, so in order to later replace/delete unnecessary placeholders
         we need to save the indices of BT, ET and TJ operators and their corresponding placeholder name
         """
-        # for i in range(len(content_parsed)):
-        #     if
-        #     print(i, content_parsed[i].operator, content_parsed[i].operands)
-        for t in content_parsed[538].operands[0]:
-            if isinstance(t, pikepdf.String):
-                print('Glyph:', t.unparse())
-                uc = self.mapping.get_mapping(t.unparse(), True)
-                if uc is not None:
-                    print(uc)
+        text_op_ctr = 0
+        positions = []
+        text_obj = {}
+        for i in range(len(content_parsed)):
+            if content_parsed[i].operator == pikepdf.Operator('BT'):
+                text_obj['BT'] = i
+            if content_parsed[i].operator == pikepdf.Operator('ET'):
+                text_obj['ET'] = i
+                positions.append(text_obj.copy())
+                text_obj = {}
+            if content_parsed[i].operator == pikepdf.Operator('TJ'):
+                if text_obj.get('TJ') is None:
+                    text_obj['TJ'] = []
+                text_obj['TJ'].append(i)
+
+        # Now we need to find the out what the actual strings are for each TJ object
+        for position in positions:
+            for tj_index in position['TJ']:
+                if len(content_parsed[tj_index].operands) < 1:
+                    continue
+                text = self.tj_to_string(content_parsed[tj_index].operands[0])
+                print(text)
+
+        # for t in content_parsed[538].operands[0]:
+        #     if isinstance(t, pikepdf.String):
+        #         print('Glyph:', t.unparse())
+        #         uc = self.mapping.get_mapping(t.unparse(), True)
+        #         if uc is not None:
+        #             print('Unicode:', (b'\u' + uc[1:-1]).decode('unicode_escape'))
         # print(pikepdf.unparse_content_stream(content_parsed).decode("utf-8"))
+        print(self.header)
         return {}
+
+    def tj_to_string(self, char_list):
+        chars = []
+        for char in char_list:
+            if isinstance(char, pikepdf.String):
+                unicode_bytes = self.mapping.get_mapping(char.unparse(), True)
+                if unicode_bytes is not None:
+                    chars.append(
+                        self.unicode_bytes_to_string(unicode_bytes)
+                    )
+        return ''.join(chars)
 
     @staticmethod
     def build_file_name(parameter):
@@ -119,6 +150,12 @@ class PDFGenerator:
             first_name=parameter['Vorname'],
             module=parameter['Modul'],
             time=time.time_ns())
+
+    @staticmethod
+    def unicode_bytes_to_string(unicode_bytes):
+        # Converting unicode-bytes to a string needs a unicode specification (\u)
+        # Also the raw unicode bytes are surrounded by < and > so we cut them off with slicing
+        return (b'\u' + unicode_bytes[1:-1]).decode('unicode_escape')
 
 
 class GlypthToUnicodeMapping:
