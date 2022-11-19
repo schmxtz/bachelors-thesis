@@ -8,6 +8,11 @@ CMAP_PARSE_ERROR = 'Placeholder strings inside the template PDF cannot be replac
 
 FONT_NAME = '/CIDFont+F1'
 
+BT_OP = pikepdf.Operator('BT')
+ET_OP = pikepdf.Operator('ET')
+TJ_OP = pikepdf.Operator('TJ')
+BEGINBFCHAR_OP = pikepdf.Operator('beginbfchar')
+
 
 class PDFGenerator:
     def __init__(self, template_file_name: str, excel_file_name: str, output_path: str):
@@ -22,6 +27,7 @@ class PDFGenerator:
         """
         self.parse_glyph_unicode_mapping()
         self.positions = self.parse_placeholder_positions()
+        print(self.positions)
 
         # Now that we have the glyph to unicode mapping we can start looking for the placeholder strings
 
@@ -74,7 +80,7 @@ class PDFGenerator:
         mapping_indices = []
         mapping_obj = None
         for i in range(len(resource_parsed)):
-            if resource_parsed[i].operator == pikepdf.Operator('beginbfchar'):
+            if resource_parsed[i].operator == BEGINBFCHAR_OP:
                 mapping_indices.append(i + 1)
 
         # Mapping dict lengths are limited to 100, so there might be more, so we collect them all in one list
@@ -101,26 +107,33 @@ class PDFGenerator:
         """
         text_op_ctr = 0
         positions = []
-        text_obj = {}
+        text_obj = {'TJ': [], 'name': []}
         for i in range(len(content_parsed)):
-            if content_parsed[i].operator == pikepdf.Operator('BT'):
+            if content_parsed[i].operator == BT_OP:
                 text_obj['BT'] = i
-            if content_parsed[i].operator == pikepdf.Operator('ET'):
+            if content_parsed[i].operator == ET_OP:
                 text_obj['ET'] = i
-                positions.append(text_obj.copy())
-                text_obj = {}
-            if content_parsed[i].operator == pikepdf.Operator('TJ'):
-                if text_obj.get('TJ') is None:
-                    text_obj['TJ'] = []
+                if text_obj['name']:
+                    positions.append(text_obj.copy())
+                text_obj = {'TJ': [], 'name': []}
+            if content_parsed[i].operator == TJ_OP:
                 text_obj['TJ'].append(i)
-
-        # Now we need to find the out what the actual strings are for each TJ object
-        for position in positions:
-            for tj_index in position['TJ']:
-                if len(content_parsed[tj_index].operands) < 1:
+                if len(content_parsed[i].operands) < 1:
                     continue
-                text = self.tj_to_string(content_parsed[tj_index].operands[0])
-                print(text)
+
+                # Parse the characters to an actual string and check if it is a placeholder
+                text = self.tj_to_string(content_parsed[i].operands[0])
+
+                """
+                Check if one of the placeholder names appears as a substring inside the parsed text.
+                Check this way around because the parsed text might contain more characters than the actual
+                placeholders. check if "placeholder_a" in "<<placeholder_a>> <<placeholder_b>>"
+                """
+                for name in self.header:
+                    if name in text:
+                        text_obj['name'].append(name)
+
+        return positions
 
         # for t in content_parsed[538].operands[0]:
         #     if isinstance(t, pikepdf.String):
