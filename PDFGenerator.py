@@ -35,7 +35,7 @@ class PDFGenerator:
     def make_pdfs(self):
         # Now that we have the positions of the placeholder strings we can replace them with the actual strings for
         # every row of the excel sheet and save each of them in a separate file
-        for parameter in self.parameters[0:1]:
+        for parameter in self.parameters:
             output_filename = self.build_file_name(parameter=parameter)
 
             # For every new file, the template has to be reopened as we tamper with its content stream
@@ -193,7 +193,6 @@ class PDFGenerator:
 
             # Now we append the remaining chars
             for i in range(1, len(parameter_value)):
-                print(parameter_value[i])
                 new_text.append(pikepdf.Object.parse(self.char_to_glyph_bytes(parameter_value[i])))
 
             # Move the operand_ctr one index after the closing arrow
@@ -213,7 +212,7 @@ class PDFGenerator:
 
     def char_to_glyph_bytes(self, char):
         encoded_char = char.encode('unicode_escape')
-        encoded_unicode_bytes = bytes(''.join(['<', encoded_char.hex().zfill(4), '>']), 'utf-8')
+        encoded_unicode_bytes = bytes(''.join(['<', hex(ord(char))[2:].zfill(4), '>']), 'utf-8')
         return self.mapping.get_mapping(encoded_unicode_bytes, False)
 
     @staticmethod
@@ -263,5 +262,5 @@ class GlypthToUnicodeMapping:
         return self.to_glyph_mapping.get(entry)
 
 
-pdf = PDFGenerator('zert4.pdf', 'Empfaenger.xlsx', '.')
+pdf = PDFGenerator('template.pdf', 'Empfaenger.xlsx', '.')
 pdf.make_pdfs()
