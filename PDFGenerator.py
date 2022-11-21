@@ -31,7 +31,6 @@ class PDFGenerator:
         # Now that we have the glyph to unicode mapping we can start looking for the placeholder strings
         self.positions = self.parse_placeholder_positions(document)
         document.close()
-        self.make_pdfs()
 
     def make_pdfs(self):
         # Now that we have the positions of the placeholder strings we can replace them with the actual strings for
@@ -194,6 +193,7 @@ class PDFGenerator:
 
             # Now we append the remaining chars
             for i in range(1, len(parameter_value)):
+                print(parameter_value[i])
                 new_text.append(pikepdf.Object.parse(self.char_to_glyph_bytes(parameter_value[i])))
 
             # Move the operand_ctr one index after the closing arrow
@@ -263,5 +263,5 @@ class GlypthToUnicodeMapping:
         return self.to_glyph_mapping.get(entry)
 
 
-pdf = PDFGenerator('zertifikat.pdf', 'Empfaenger.xlsx', '.')
-# pdf.make_pdfs()
+pdf = PDFGenerator('zert4.pdf', 'Empfaenger.xlsx', '.')
+pdf.make_pdfs()
