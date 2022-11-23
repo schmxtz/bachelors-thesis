@@ -6,11 +6,10 @@ DEKAN_NAME = 'Prof. Dr. rer. nat. Heinz Schmitz'
 LEITER_NAME = 'Prof. Dr. sc. nat. Konstantin Knorr'
 CMAP_PARSE_ERROR = 'Placeholder strings inside the template PDF cannot be replaced.'
 
-FONT_NAME = '/CIDFont+F1'
-
 BT_OP = pikepdf.Operator('BT')
 ET_OP = pikepdf.Operator('ET')
 TJ_OP = pikepdf.Operator('TJ')
+TF_OP = pikepdf.Operator('Tf')
 BEGINBFCHAR_OP = pikepdf.Operator('beginbfchar')
 
 
@@ -19,7 +18,7 @@ class PDFGenerator:
         self.template_file_name = template_file_name
         self.parameters, self.header = parse_excel_file(excel_file_name)
         document = Pdf.open(filename_or_stream=template_file_name)
-        self.mapping = GlypthToUnicodeMapping()
+        self.mapping = None
 
         """
         PDF renders strings by printing them character by character. In a PDF these are called glyphs and there exists 
@@ -35,7 +34,7 @@ class PDFGenerator:
     def make_pdfs(self):
         # Now that we have the positions of the placeholder strings we can replace them with the actual strings for
         # every row of the excel sheet and save each of them in a separate file
-        for parameter in self.parameters:
+        for parameter in self.parameters[0:1]:
             output_filename = self.build_file_name(parameter=parameter)
 
             # For every new file, the template has to be reopened as we tamper with its content stream
@@ -55,7 +54,8 @@ class PDFGenerator:
                     self.delete_entries(content_parsed, position['BT'], position['ET'])
                 else:
                     for start, ctr, index in position['TJ']:
-                        self.replace_tj_entry(document, parameter, content_parsed, index, position['name'][start:ctr])
+                        self.replace_tj_entry(document, parameter, content_parsed, index, position['name'][start:ctr],
+                                              position['font'])
 
             # Replace the old content stream with the changed one
             document.pages[0].obj.Contents[0] = document.make_stream(
@@ -70,17 +70,10 @@ class PDFGenerator:
     def parse_glyph_unicode_mapping(self, document):
         # Each pages' resources reference the same fonts, thus we can just take the first
         font_list = document.pages[0]['/Resources']['/Font']
-
-        # Put the main font at the end of the list, so that unicode->glyph mappings can be overwritten
-        # We do this because different font glyphs can map to the same unicode char
-        font_names_list = list(font_list)
-        for i in range(len(font_names_list)):
-            if font_list[font_names_list[i]]['/BaseFont'] == FONT_NAME:
-                break
-        font_names_list[-1], font_names_list[i] = font_names_list[i], font_names_list[-1]
+        self.mapping = GlypthToUnicodeMapping(list(font_list))
 
         # Loop through available fonts and add their mappings,
-        for font in font_names_list:
+        for font in font_list:
             target_font = font_list[font]
 
             if target_font is None or target_font.get('/ToUnicode') is None:
@@ -107,7 +100,7 @@ class PDFGenerator:
 
             # Iterate over mapping object pairwise
             for glyph, unicode in zip(mapping_obj[0::2], mapping_obj[1::2]):
-                self.mapping.add_entry(glyph.unparse(), unicode.unparse())
+                self.mapping.add_entry(font, glyph.unparse(), unicode.unparse())
 
     def parse_placeholder_positions(self, document):
         content = document.pages[0].obj.Contents[0]
@@ -139,7 +132,7 @@ class PDFGenerator:
                 start = len(text_obj['name'])
 
                 # Parse the characters to an actual string and check if it is a placeholder
-                text = self.tj_to_string(content_parsed[i].operands[0])
+                text = self.tj_to_string(content_parsed[i].operands[0], text_obj['font'])
                 """
                 Check if one of the placeholder names appears as a substring inside the parsed text.
                 Check this way around because the parsed text might contain more characters than the actual
@@ -151,29 +144,31 @@ class PDFGenerator:
                         text_obj['name'].append(name)
                 ctr = len(text_obj['name'])
                 text_obj['TJ'].append((start, ctr, i))
+            if content_parsed[i].operator == TF_OP:
+                text_obj['font'] = content_parsed[i].operands[0]
 
         return positions
 
-    def tj_to_string(self, char_list):
+    def tj_to_string(self, char_list, font):
         chars = []
         for char in char_list:
             if isinstance(char, pikepdf.String):
-                unicode_bytes = self.mapping.get_mapping(char.unparse(), True)
+                unicode_bytes = self.mapping.get_mapping(font, char.unparse(), True)
                 if unicode_bytes is not None:
                     chars.append(
                         self.unicode_bytes_to_string(unicode_bytes)
                     )
         return ''.join(chars)
 
-    def replace_tj_entry(self, document, parameter, content, index, names):
+    def replace_tj_entry(self, document, parameter, content, index, names, font):
         # As our placeholders are surrounded by « and » we need to replace every char enclosed by the actual char
         new_text = pikepdf.Array()
         operands = list(content[index].operands[0])
         operands_len = len(operands)
         operand_ctr = 0
 
-        opening_arrow_glyph = self.mapping.get_mapping(b'<00ab>', False)
-        closing_arrow_glyph = self.mapping.get_mapping(b'<00bb>', False)
+        opening_arrow_glyph = self.mapping.get_mapping(font, b'<00ab>', False)
+        closing_arrow_glyph = self.mapping.get_mapping(font, b'<00bb>', False)
 
         for name in names:
             parameter_value = parameter[name]
@@ -186,14 +181,14 @@ class PDFGenerator:
                 new_text.append(operands[i])
 
             # Next we need to give the offset of the « char to the first letter of the actual text
-            new_text.append(pikepdf.Object.parse(self.char_to_glyph_bytes(parameter_value[0])))
+            new_text.append(pikepdf.Object.parse(self.char_to_glyph_bytes(parameter_value[0], font)))
             if operand_ctr + 1 < operands_len and not isinstance(operands[operand_ctr + 1], pikepdf.String):
                 operand_ctr += 1
                 new_text.append(operands[operand_ctr])
 
             # Now we append the remaining chars
             for i in range(1, len(parameter_value)):
-                new_text.append(pikepdf.Object.parse(self.char_to_glyph_bytes(parameter_value[i])))
+                new_text.append(pikepdf.Object.parse(self.char_to_glyph_bytes(parameter_value[i], font)))
 
             # Move the operand_ctr one index after the closing arrow
             for i in range(operand_ctr, operands_len):
@@ -210,10 +205,10 @@ class PDFGenerator:
         new_content_instruction = pikepdf.parse_content_stream(document.make_stream(new_content))[0]
         content[index] = new_content_instruction
 
-    def char_to_glyph_bytes(self, char):
+    def char_to_glyph_bytes(self, char, font):
         encoded_char = char.encode('unicode_escape')
         encoded_unicode_bytes = bytes(''.join(['<', hex(ord(char))[2:].zfill(4), '>']), 'utf-8')
-        return self.mapping.get_mapping(encoded_unicode_bytes, False)
+        return self.mapping.get_mapping(font, encoded_unicode_bytes, False)
 
     @staticmethod
     def build_file_name(parameter):
@@ -248,18 +243,27 @@ class PDFGenerator:
 
 
 class GlypthToUnicodeMapping:
-    def __init__(self):
-        self.to_unicode_mapping = {}
-        self.to_glyph_mapping = {}
+    def __init__(self, font_list):
+        self.mappings = {}
+        for font in font_list:
+            self.mappings[font] = {}
+            self.mappings[font]['to_unicode'] = {}
+            self.mappings[font]['to_glyph'] = {}
 
-    def add_entry(self, glyph: bytes, unicode: bytes):
-        self.to_glyph_mapping[unicode] = glyph
-        self.to_unicode_mapping[glyph] = unicode
+    def add_entry(self, font: str, glyph: bytes, unicode: bytes):
+        self.mappings[font]['to_glyph'][unicode] = glyph
+        self.mappings[font]['to_unicode'][glyph] = unicode
 
-    def get_mapping(self, entry: bytes, is_glyph: bool):
+    def get_mapping(self, font: str, entry: bytes, is_glyph: bool):
         if is_glyph:
-            return self.to_unicode_mapping.get(entry)
-        return self.to_glyph_mapping.get(entry)
+            try:
+                return self.mappings[font]['to_unicode'][entry]
+            except KeyError:
+                return None
+        try:
+            return self.mappings[font]['to_glyph'][entry]
+        except KeyError:
+            return None
 
 
 pdf = PDFGenerator('template.pdf', 'Empfaenger.xlsx', '.')
