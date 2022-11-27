@@ -1,5 +1,7 @@
 import openpyxl
 
+PLACEHOLDER_OPENING = '«'
+PLACEHOLDER_CLOSING = '»'
 
 def find_sig_dict_byte_pos(file_name: str):
     """
@@ -54,7 +56,7 @@ def parse_excel_file(file_name):
             # Check if cell value is not empty string
             if row[cell].value:
                 # Store as key-value (placeholder, value) pairs
-                parsed_row[header_row[cell].value] = row[cell].value
+                parsed_row[PLACEHOLDER_OPENING + header_row[cell].value + PLACEHOLDER_CLOSING] = row[cell].value
         parsed_rows.append(parsed_row)
 
     return parsed_rows, [header.value for header in header_row]
