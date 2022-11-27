@@ -29,8 +29,8 @@ class PDFGenerator:
     def convert_docx_to_pdf(self):
         subprocess.call("wscript DocxToPdf.vbs " + self.output_path)
 
-    @staticmethod
-    def replace_text_in_paragraph(paragraph, parameter):
+
+    def replace_text_in_paragraph(self, paragraph, parameter):
         line = paragraph.runs
         for word in line:
             if word.text in parameter:
@@ -40,7 +40,13 @@ class PDFGenerator:
                 word.text = word.text.replace(word.text, value)
             else:
                 if PLACEHOLDER_OPENING in word.text and PLACEHOLDER_CLOSING in word.text:
-                    word.clear()
+                    self.delete_paragraph(paragraph)
+
+    @staticmethod
+    def delete_paragraph(paragraph):
+        p = paragraph._element
+        p.getparent().remove(p)
+        paragraph._p = paragraph._element = None
 
     @staticmethod
     def build_file_name(parameter):
