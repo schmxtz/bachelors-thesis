@@ -3,3 +3,4 @@ asn1crypto
 cryptography
 pyhanko
 openpyxl
+python-docx

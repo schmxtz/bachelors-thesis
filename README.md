@@ -17,4 +17,5 @@
     - cryptography: Library to parse the keystore and to create the signature
     - pyhanko: Was used to validate my created signatures/error debugging
     - openpyxl: Library to parse the excel sheet containing the information necessary for generating the PDF files
+    - python-docx: Library to replace the placeholders inside the .docx files and save them as new documents
     
