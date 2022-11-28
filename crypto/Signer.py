@@ -1,9 +1,7 @@
-import pikepdf
-from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, KeySerializationEncryption
-from cryptography.hazmat.primitives.asymmetric import padding, utils
+from cryptography.hazmat.primitives.serialization import pkcs12, Encoding
 from cryptography.hazmat.primitives import hashes
 from CMSSignedData import CMSSignedData
-from PDFWriter import PDFWriter
+from pdf.PDFWriter import PDFWriter
 from utils.Files import find_sig_dict_byte_pos
 import os, mmap
 

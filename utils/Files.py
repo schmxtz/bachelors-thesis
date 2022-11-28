@@ -37,7 +37,16 @@ def find_sig_dict_byte_pos(file_name: str):
         raise ValueError('Byte Position of signature cannot be found inside output file.')
 
 
-def parse_excel_file(file_name):
+def parse_excel_file(file_name: str):
+    """
+    Parses given Excel file by iterating over first worksheet row by row and skipping empty cells
+
+    :param file_name: File name of given excel sheet
+    :return: Returns tuple containing list of parameters and the header row. List of parameters is a list of
+    dictionaries where the key is the placeholder itself including the placeholder marker and the value is the value
+    that is to be replaced.
+    """
+
     workbook = openpyxl.load_workbook(filename=file_name, read_only=True)
     worksheet = workbook.worksheets[0]
     rows = worksheet.rows
@@ -59,4 +68,5 @@ def parse_excel_file(file_name):
                 parsed_row[PLACEHOLDER_OPENING + header_row[cell].value + PLACEHOLDER_CLOSING] = row[cell].value
         parsed_rows.append(parsed_row)
 
+    # header_row is unpacked into its values with list comprehension
     return parsed_rows, [header.value for header in header_row]
