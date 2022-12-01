@@ -4,6 +4,7 @@ If (WScript.Arguments.Count = 0) Then
 	WScript.Quit 1
 End If
 sFolder = WScript.Arguments(0)
+deletePDF = WScript.Arguments(1)
 
 'Declare needed variables
 Dim wordApplication
@@ -45,8 +46,10 @@ For Each oFile In oFSO.GetFolder(sFolder).Files
 	SaveChanges = 0				'wdDoNotSaveChanges
 	wordDocument.Close SaveChanges
 	
-	'Clean up source .docx file
-	oFSO.DeleteFile documentFile
+	'Clean up source .docx file if deletePDF is set to 1
+	If deletePDF = 1 Then
+	  oFSO.DeleteFile documentFile
+	End if
   End if
 Next
 

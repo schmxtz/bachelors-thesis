@@ -1,7 +1,7 @@
 import sys, logging
-from PDFGeneratorWindow import PDFGeneratorWindow
-from PDFSignerWindow import PDFSignerWindow
-from Logger import Handler
+from gui.PDFGeneratorWindow import PDFGeneratorWindow
+from gui.PDFSignerWindow import PDFSignerWindow
+from gui.Logger import Handler
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QStackedWidget, QPushButton, QHBoxLayout, QApplication, QPlainTextEdit
 from PyQt5.QtCore import QSize
@@ -34,14 +34,14 @@ class MainWindow(QWidget):
         self.stacked_widget.setCurrentIndex(2)
 
         generator_icon = qta.icon('msc.file-pdf')
-        button_generator = QPushButton(generator_icon, 'Generate PDFs')
+        button_generator = QPushButton(generator_icon, 'PDF Generation')
         button_generator.setFont(QFont('MS Shell Dlg', 16))
         button_generator.setFixedSize(575, 70)
         button_generator.setIconSize(QSize(60, 50))
         button_generator.clicked.connect(self.show_generator_widget)
 
         sign_icon = qta.icon('msc.file', 'msc.edit', options=[{}, {'scale_factor': 0.6, 'offset': (0.0, 0.1)}])
-        button_sign = QPushButton(sign_icon, 'Sign PDFs')
+        button_sign = QPushButton(sign_icon, 'PDF Signing')
         button_sign.setFont(QFont('MS Shell Dlg', 16))
         button_sign.setFixedSize(575, 70)
         button_sign.setIconSize(QSize(60, 50))
@@ -70,8 +70,3 @@ def main():
     ex = MainWindow()
     ex.show()
     sys.exit(app.exec())
-
-
-
-if __name__ == '__main__':
-    main()

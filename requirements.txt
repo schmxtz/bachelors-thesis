@@ -1,9 +1,8 @@
-pikepdf~=6.2.1
-asn1crypto~=1.5.1
-cryptography~=38.0.1
+pikepdf
+asn1crypto
+cryptography
 pyhanko
-openpyxl~=3.0.10
+openpyxl
 python-docx
-pyqt5~=5.15.7
-
-QtAwesome~=1.2.1
+pyqt5
+QtAwesome

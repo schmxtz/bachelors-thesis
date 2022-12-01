@@ -1,6 +1,7 @@
 import logging
 from PyQt5.QtCore import pyqtSignal, QObject
 
+DEBUG = True
 
 class Handler(QObject, logging.Handler):
     new_record = pyqtSignal(object)
@@ -8,7 +9,10 @@ class Handler(QObject, logging.Handler):
     def __init__(self, parent):
         super().__init__(parent)
         super(logging.Handler).__init__()
-        formatter = Formatter('%(asctime)s %(levelname)s %(module)s %(funcName)s %(message)s', '%d/%m/%Y %H:%M:%S')
+        if DEBUG:
+            formatter = Formatter('%(asctime)s %(levelname)s %(module)s %(funcName)s %(message)s', '%d/%m/%Y %H:%M:%S')
+        else:
+            formatter = Formatter('%(asctime)s %(message)s', '%d/%m/%Y %H:%M:%S')
         self.setFormatter(formatter)
 
     def emit(self, record):

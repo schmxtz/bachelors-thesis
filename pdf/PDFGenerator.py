@@ -1,14 +1,14 @@
 from docx import Document
 from utils.Files import parse_excel_file, PLACEHOLDER_CLOSING, PLACEHOLDER_OPENING
-import os, time
-import subprocess
+import os, time, subprocess, logging
+from threading import Thread
 
 DOCX_EXT = '.docx'
 EXCEL_EXT = '.xlsx'
 
 
 class PDFGenerator:
-    def __init__(self, template_file_name: str, excel_file_name: str, output_path: str):
+    def __init__(self, template_file_name: str, excel_file_name: str, output_path: str, delete_source_docx: bool = True):
         if not template_file_name.endswith(DOCX_EXT):
             raise ValueError('Template file must be {} format.'.format(DOCX_EXT))
         self.template_file_name = template_file_name
@@ -21,6 +21,7 @@ class PDFGenerator:
             raise ValueError('Output path must be a directory.')
         self.output_path = output_path
 
+        self.delete_source_docx = delete_source_docx
         self.parameters = None
         self.header = None
 
@@ -28,9 +29,13 @@ class PDFGenerator:
         self.parameters, self.header = parse_excel_file(self.excel_file_name)
 
     def replace_parameters(self):
+        logging.info('Creating word files... (0/{0})'.format(len(self.parameters)))
         if self.parameters is None or self.header is None:
             return
+        ctr = 1
+        len_params = len(self.parameters)
         for parameter in self.parameters:
+            logging.info('Creating word files... ({0}/{1})'.format(ctr, len_params))
             template = Document(self.template_file_name)
             file_name = self.build_file_name(parameter)
             for paragraph in template.paragraphs:
@@ -42,9 +47,16 @@ class PDFGenerator:
                         for paragraph in cell.paragraphs:
                             self.replace_text_in_paragraph(paragraph, parameter)
             template.save(self.output_path + '/' + file_name)
+            ctr += 1
+        logging.info('Finished creating word files')
 
     def convert_docx_to_pdf(self):
-        subprocess.call("wscript DocxToPdf.vbs " + self.output_path)
+        command = 'wscript ./pdf/DocxToPdf.vbs {0} {1}'.format(self.output_path, int(self.delete_source_docx))
+        subprocess.call(command)
+        logging.info('Finished converting PDFs')
+
+    def convert_docx_to_pdf_thread(self):
+        Thread(target=self.convert_docx_to_pdf).start()
 
     def replace_text_in_paragraph(self, paragraph, parameter):
         line = paragraph.runs
@@ -72,12 +84,3 @@ class PDFGenerator:
             module=parameter[PLACEHOLDER_OPENING + 'Modul' + PLACEHOLDER_CLOSING],
             time=time.time_ns())
 
-
-# Output path is necessary as its later used to call the DocxToPDf script
-pdf = PDFGenerator(
-    template_file_name='C:/Users/Philipp/Downloads/Bachelor/Ph_Schmitz/Einzelzertifikat_final_mit Serienfeldern_abWS1819_mit_dig_unterschrift.docx',
-    excel_file_name='C:/Users/Philipp/Downloads/Bachelor/Ph_Schmitz/Empfaenger.xlsx',
-    output_path='C:/Users/Philipp/Downloads/Bachelor/docx-test/')
-pdf.parse_excel_file()
-pdf.replace_parameters()
-pdf.convert_docx_to_pdf()
