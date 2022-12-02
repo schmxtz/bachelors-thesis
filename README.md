@@ -6,10 +6,12 @@
     - Add certificate validation
     - Add feature to generate self-signed certificate
     - Make changes to comply with PAdES-baseline and additional level
-    - Add feature to generate PDFs based on the table
     - Clean up code
     - Feature for adding image signature
-    - UI
+    - Check licensing
+    - Naming
+    - Version
+    - Check adobe list for group certificates
 
 - Explanation for choice of library:
     - pikepdf: Library to work with PDF files on the object-level
