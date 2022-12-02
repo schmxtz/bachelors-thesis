@@ -10,7 +10,7 @@ import qtawesome as qta
 
 
 WINDOW_SIZE = (1200, 1000)
-VERSION = 'v0.1'
+VERSION = 'v0.1.1'
 NAME = 'GenSig'
 
 
