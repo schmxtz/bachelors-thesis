@@ -1,7 +1,8 @@
-from docx import Document
 from utils.Files import parse_excel_file, PLACEHOLDER_CLOSING, PLACEHOLDER_OPENING
+from utils.Util import has_numbers
 import os, time, subprocess, logging
 from threading import Thread
+from docx import Document
 
 DOCX_EXT = '.docx'
 EXCEL_EXT = '.xlsx'
@@ -67,8 +68,14 @@ class PDFGenerator:
                     value = ''
                 word.text = word.text.replace(word.text, value)
             else:
+                # Check if the current word is a placeholder
                 if PLACEHOLDER_OPENING in word.text and PLACEHOLDER_CLOSING in word.text:
-                    self.delete_paragraph(paragraph)
+                    # If the placeholder is part of a numbered list, delete the entire line
+                    if has_numbers(word.text):
+                        self.delete_paragraph(paragraph)
+                    # Else replace the placeholder with empty string
+                    else:
+                        word.text = word.text.replace(word.text, '')
 
     @staticmethod
     def delete_paragraph(paragraph):
