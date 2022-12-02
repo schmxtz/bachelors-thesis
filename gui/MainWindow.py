@@ -10,13 +10,15 @@ import qtawesome as qta
 
 
 WINDOW_SIZE = (1200, 1000)
+VERSION = 'v0.1'
+NAME = 'GenSig'
 
 
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('PDF signer and Generator')
-        self.setFixedSize(WINDOW_SIZE[0], WINDOW_SIZE[1])
+        self.setWindowTitle('{0} {1}'.format(NAME, VERSION))
+        self.setGeometry(0, 0, WINDOW_SIZE[0], WINDOW_SIZE[1])
 
         main_layout = QVBoxLayout()
 
