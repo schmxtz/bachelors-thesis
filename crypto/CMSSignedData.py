@@ -27,15 +27,7 @@ class CMSSignedData:
         issuer = self.signing_cert.native['tbs_certificate']['issuer']
         ias = cms.IssuerAndSerialNumber()
         ias['serial_number'] = self.signing_cert.native['tbs_certificate']['serial_number']
-        ias['issuer'] = x509.Name.build(OrderedDict([
-            ('country_name', issuer['country_name']),
-            ('state_or_province_name', issuer['state_or_province_name']),
-            ('locality_name', issuer['locality_name']),
-            ('organization_name', issuer['organization_name']),
-            ('organizational_unit_name', issuer['organizational_unit_name']),
-            ('common_name', issuer['common_name']),
-            ('email_address', issuer['email_address']),
-        ]), use_printable=True)
+        ias['issuer'] = x509.Name.build(issuer, use_printable=True)
         sid = cms.SignerIdentifier(name='issuer_and_serial_number', value=ias)
         self.signer_info['sid'] = sid
 

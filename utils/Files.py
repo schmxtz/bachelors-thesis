@@ -3,6 +3,7 @@ import openpyxl
 PLACEHOLDER_OPENING = '«'
 PLACEHOLDER_CLOSING = '»'
 
+
 def find_sig_dict_byte_pos(file_name: str):
     """
     This function assumes alot of the given file:,

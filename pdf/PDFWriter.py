@@ -71,7 +71,7 @@ class PDFWriter:
         if not '/Annots' in self.doc.pages[self.page_index]:
             self.doc.pages[self.page_index].Annots = pikepdf.Array()
 
-        # Add reference to annotation dict to the annotations array for this page
+        # Add reference of annotation dict to the annotations array for this page
         self.doc.pages[self.page_index].Annots.append(self.doc.make_indirect(self.annot_dict_obj))
 
         # Add reference to AcroForm entry in Root dictionary
@@ -79,6 +79,11 @@ class PDFWriter:
         self.output_file_name = self.save()
 
     def save(self):
+        """
+        Saves file either in-place or creates a new file
+
+        :return:
+        """
         if self.in_place:
             self.doc.save(self.file_name, normalize_content=False)
             return self.file_name
@@ -88,6 +93,12 @@ class PDFWriter:
             return out_file_name
 
     def create_sig_dict(self):
+        """
+        Creates the signature dictionary with padded contents entry and placeholders for ByteRange values. SigDict is
+        specified in ISO32000 (PDF 1.7) ch. 12.8.1 Table 252
+
+        :return:
+        """
         sig_dict = pikepdf.Dictionary(
             {
                 '/Type': pikepdf.Name('/Sig'),
@@ -104,14 +115,20 @@ class PDFWriter:
         self.sig_dict_obj = self.doc.make_indirect(sig_dict)
 
     def create_annot_dict(self):
+        """
+        Creates the annotation dictionary as specfied in ISO32000 (PDF 1.7) ch. 12.5.1 Table 164
+
+        :return:
+        """
+
         annot_dict = pikepdf.Dictionary(
             {
                 '/Type': pikepdf.Name('/Annot'),
                 '/SubType': pikepdf.Name('/Widget'),
-                '/FT': pikepdf.Name('/Sig'),
+                '/FT': pikepdf.Name('/Sig'),    # Entry common to all field dictionaries ISO32000 (PDF 1.7) ch. 12.7.3.1
                 '/Rect': self.sig_pos,
-                '/V': self.sig_dict_obj,
-                '/T': 'Signature1',
+                '/V': self.sig_dict_obj,        # Value is the SigDict as specified in ISO32000 (PDF 1.7) ch. 12.7.4.5
+                '/T': 'Signature1',             # Name of the signature that is displayed in the PDF-Reader
                 '/F': 132,
                 '/P': self.doc.pages[self.page_index].obj,
                 '/AP': pikepdf.Dictionary(
@@ -131,10 +148,15 @@ class PDFWriter:
         self.annot_dict_obj = self.doc.make_indirect(annot_dict)
 
     def create_sig_field_dict(self):
+        """
+        Creates the interactive form dictionary as specified in ISO32000 (PDF 1.7) ch. 12.7.2 Table 218.
+
+        :return:
+        """
         sig_field_dict = pikepdf.Dictionary(
             {
                 '/Fields': pikepdf.Array([self.annot_dict_obj]),
-                '/SigFlags': 3
+                '/SigFlags': 3      # Indicates that both values in ISO32000 (PDF 1.7) ch. 12.7.2 Table 219 are true
             }
         )
         self.sig_field_dict_obj = self.doc.make_indirect(sig_field_dict)

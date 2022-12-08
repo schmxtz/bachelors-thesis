@@ -6,6 +6,8 @@ from utils.Files import find_sig_dict_byte_pos
 import os, mmap
 
 
+
+
 CONTENTS_PADDING = 10000
 HASHING_ALGO = 'sha256'
 
@@ -92,3 +94,7 @@ class Signer:
         return digest.finalize()
 
 
+s = Signer(pdf_file_names=['C:/Users/Philipp/Downloads/Bachelor/docx-test/Adams_Andreas_IT-Sicherheit_1669989076426872900.pdf'],
+           pkcs12_file_name='C:/Users/Philipp/Downloads/Bachelor/Philipp_Schmitz_131063584_12250718473589342683760807179_2022-11-17_2025-11-16.p12',
+           in_place=False,
+           passphrase=b'FmD8(6C6')
