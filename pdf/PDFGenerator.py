@@ -10,6 +10,14 @@ EXCEL_EXT = '.xlsx'
 
 class PDFGenerator:
     def __init__(self, template_file_name: str, excel_file_name: str, output_path: str, delete_source_docx: bool = True):
+        """
+        Initializes attributes and checks their validity
+
+        :param template_file_name: Path to the template file
+        :param excel_file_name: Path to the excel file
+        :param output_path: Path to the folder to place the output files into
+        :param delete_source_docx: Boolean indicating whether to delete the source .docx files afterwards
+        """
         if not template_file_name.endswith(DOCX_EXT):
             raise ValueError('Template file must be {} format.'.format(DOCX_EXT))
         self.template_file_name = template_file_name
@@ -27,9 +35,21 @@ class PDFGenerator:
         self.header = None
 
     def parse_excel_file(self):
+        """
+        Parses the excel file.
+
+        :return:
+        """
+        logging.info('Parsing excel file: {0}'.format(self.excel_file_name))
         self.parameters, self.header = parse_excel_file(self.excel_file_name)
+        logging.info('Finished parsing excel file: {0}'.format(self.excel_file_name))
 
     def replace_parameters(self):
+        """
+        Iterates through the word document and replaces the placeholders with the given values in parameters.
+
+        :return:
+        """
         logging.info('Creating word files... (0/{0})'.format(len(self.parameters)))
         if self.parameters is None or self.header is None:
             return
@@ -52,14 +72,37 @@ class PDFGenerator:
         logging.info('Finished creating word files')
 
     def convert_docx_to_pdf(self):
+        """
+        Function that calls the Visual-Basic-script that converts the Word files to pdf files.
+
+        :return:
+        """
         command = 'wscript ./pdf/DocxToPdf.vbs {0} {1}'.format(self.output_path, int(self.delete_source_docx))
         subprocess.call(command)
         logging.info('Finished converting PDFs')
 
     def convert_docx_to_pdf_thread(self):
+        """
+        Function that calls our word-to-pdf conversion function in a thread so that it doesn't block the UI.
+
+        :return:
+        """
+
         Thread(target=self.convert_docx_to_pdf).start()
 
     def replace_text_in_paragraph(self, paragraph, parameter):
+        """
+        This is the actual function that replaces the placeholders, deletes them or sets their text to an empty string.
+        Depending on the layout of the template file, the logic in this function might have to be altered. As of now the
+        text of the original placeholders is set to an empty string. If a name in the numbered lists (Inhalt_01,
+        Inhalt_02, ...) is very long and causes a linebreak, it is possible that this shifts the following lines
+        underneath which leads to the creation of a second page, which is not desirable. To counter this, there is a
+        function called delete_paragraph, but we don't use it as of now.
+
+        :param paragraph: The paragraph that is to be checked for placeholders.
+        :param parameter: Parameters containing a dictionary of key-value with placeholder-name: placeholder-value
+        :return:
+        """
         line = paragraph.runs
         for word in line:
             if word.text in parameter:
@@ -70,21 +113,28 @@ class PDFGenerator:
             else:
                 # Check if the current word is a placeholder
                 if PLACEHOLDER_OPENING in word.text and PLACEHOLDER_CLOSING in word.text:
-                    # If the placeholder is part of a numbered list, delete the entire line
-                    if has_numbers(word.text):
-                        self.delete_paragraph(paragraph)
-                    # Else replace the placeholder with empty string
-                    else:
-                        word.text = word.text.replace(word.text, '')
+                    word.text = word.text.replace(word.text, '')
 
     @staticmethod
     def delete_paragraph(paragraph):
+        """
+        Deletes the given paragraph
+
+        :param paragraph: Paragraph which is to be deleted
+        :return:
+        """
         p = paragraph._element
         p.getparent().remove(p)
         paragraph._p = paragraph._element = None
 
     @staticmethod
     def build_file_name(parameter):
+        """
+        Builds file name with given parameter list.
+        :param parameter: Parameters containing a dictionary of key-value with placeholder-name: placeholder-value
+        :return: Returns a file name including last name, first name, module name and a timestamp.
+        """
+
         return '{last_name}_{first_name}_{module}_{time}.docx'.format(
             last_name=parameter[PLACEHOLDER_OPENING + 'Nachname' + PLACEHOLDER_CLOSING],
             first_name=parameter[PLACEHOLDER_OPENING + 'Vorname' + PLACEHOLDER_CLOSING],

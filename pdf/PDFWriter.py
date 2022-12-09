@@ -10,7 +10,7 @@ class PDFWriter:
     def __init__(self, file_name: str, content_padding: int, in_place: bool = False, page_index: int = None,
                  sig_pos: [int] = None):
         """
-        Initializes the PDF-object that can be later fed with signature information
+        Initializes the PDF-object that is later fed with signature information
 
         :param file_name: Name of the file that should be signed
         :param content_padding: Padding size of the /Contents value in bytes
