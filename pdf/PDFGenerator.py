@@ -1,15 +1,20 @@
-from utils.Files import parse_excel_file, PLACEHOLDER_CLOSING, PLACEHOLDER_OPENING
-from utils.Util import has_numbers
-import os, time, subprocess, logging
+import logging
+import os
+import subprocess
+import time
 from threading import Thread
+
 from docx import Document
+
+from utils.Files import parse_excel_file, PLACEHOLDER_CLOSING, PLACEHOLDER_OPENING
 
 DOCX_EXT = '.docx'
 EXCEL_EXT = '.xlsx'
 
 
 class PDFGenerator:
-    def __init__(self, template_file_name: str, excel_file_name: str, output_path: str, delete_source_docx: bool = True):
+    def __init__(self, template_file_name: str, excel_file_name: str, output_path: str,
+                 delete_source_docx: bool = True):
         """
         Initializes attributes and checks their validity
 
@@ -90,7 +95,8 @@ class PDFGenerator:
 
         Thread(target=self.convert_docx_to_pdf).start()
 
-    def replace_text_in_paragraph(self, paragraph, parameter):
+    @staticmethod
+    def replace_text_in_paragraph(paragraph, parameter):
         """
         This is the actual function that replaces the placeholders, deletes them or sets their text to an empty string.
         Depending on the layout of the template file, the logic in this function might have to be altered. As of now the
@@ -140,4 +146,3 @@ class PDFGenerator:
             first_name=parameter[PLACEHOLDER_OPENING + 'Vorname' + PLACEHOLDER_CLOSING],
             module=parameter[PLACEHOLDER_OPENING + 'Modul' + PLACEHOLDER_CLOSING],
             time=time.time_ns())
-

@@ -1,5 +1,7 @@
-import pikepdf, os
+import os
+import pikepdf
 from pikepdf import Pdf, Rectangle
+
 from utils.ArgumentValidator import validate_sig_pos
 
 SIGNATURE_BOX_WIDTH = 200
@@ -29,7 +31,7 @@ class PDFWriter:
         if page_index is None or page_index >= num_of_pages:
             self.page_index = len(self.doc.pages) - 1
 
-        # MediaBox object is a rectangle, but it still needs to be 'put' into one in order to access the attributes
+        # MediaBox object is a rectangle, specifies the pages dimensions
         page_specs = Rectangle(self.doc.pages[self.page_index]['/MediaBox'])
         self.sig_pos = sig_pos
         if self.sig_pos is None:

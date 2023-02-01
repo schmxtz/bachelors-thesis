@@ -3,6 +3,7 @@ from PyQt5.QtCore import pyqtSignal, QObject
 
 DEBUG = True
 
+
 class Handler(QObject, logging.Handler):
     new_record = pyqtSignal(object)
 
@@ -17,7 +18,7 @@ class Handler(QObject, logging.Handler):
 
     def emit(self, record):
         msg = self.format(record)
-        self.new_record.emit(msg) # <---- emit signal here
+        self.new_record.emit(msg)  # <---- emit signal here
 
 
 class Formatter(logging.Formatter):
