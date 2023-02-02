@@ -1,6 +1,8 @@
 from asn1crypto import cms, x509, core, tsp
 from collections import OrderedDict
+import hashlib
 from hashlib import sha256
+import rfc3161ng
 
 
 class CMSSignedData:
@@ -27,15 +29,7 @@ class CMSSignedData:
         issuer = self.signing_cert.native['tbs_certificate']['issuer']
         ias = cms.IssuerAndSerialNumber()
         ias['serial_number'] = self.signing_cert.native['tbs_certificate']['serial_number']
-        ias['issuer'] = x509.Name.build(OrderedDict([
-            ('country_name', issuer['country_name']),
-            ('state_or_province_name', issuer['state_or_province_name']),
-            ('locality_name', issuer['locality_name']),
-            ('organization_name', issuer['organization_name']),
-            ('organizational_unit_name', issuer['organizational_unit_name']),
-            ('common_name', issuer['common_name']),
-            ('email_address', issuer['email_address']),
-        ]), use_printable=True)
+        ias['issuer'] = x509.Name.build(issuer, use_printable=True)
         sid = cms.SignerIdentifier(name='issuer_and_serial_number', value=ias)
         self.signer_info['sid'] = sid
 
@@ -84,6 +78,7 @@ class CMSSignedData:
         from cryptography.hazmat.primitives import hashes
         data = self.signer_info['signed_attrs'].untag().dump()
         self.signer_info['signature'] = privkey.sign(data=data, padding=padding.PKCS1v15(), algorithm=hashes.SHA256())
+        # self.add_timestamp_token()
 
     def set_digest_algorithms(self, name: str):
         self.singed_data['digest_algorithms'] = [OrderedDict([
@@ -94,6 +89,24 @@ class CMSSignedData:
             ('algorithm', name),
             ('parameters', None)
         ])
+
+    def add_timestamp_token(self):
+        rt = rfc3161ng.RemoteTimestamper(url='http://freetsa.org/tsr', hashname='sha256')
+        hash_obj = hashlib.new('sha256')
+        hash_obj.update(self.signer_info['signature'].native)
+        signature_hash = hash_obj.digest()
+        print(signature_hash.hex())
+
+        tst = rt.timestamp(digest=signature_hash, include_tsa_certificate=False)
+
+        signature_time_stamp = cms.ContentInfo.load(tst)
+
+        self.signer_info['unsigned_attrs'] = [
+            OrderedDict([
+                ('type', 'signature_time_stamp_token'),
+                ('values', [signature_time_stamp])
+            ])
+        ]
 
     def dump(self):
         self.singed_data['signer_infos'] = [self.signer_info]

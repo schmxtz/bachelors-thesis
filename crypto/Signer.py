@@ -1,12 +1,12 @@
 from cryptography.hazmat.primitives.serialization import pkcs12, Encoding
 from cryptography.hazmat.primitives import hashes
-from CMSSignedData import CMSSignedData
+from crypto.CMSSignedData import CMSSignedData
 from pdf.PDFWriter import PDFWriter
 from utils.Files import find_sig_dict_byte_pos
 import os, mmap
 
 
-CONTENTS_PADDING = 10000
+CONTENTS_PADDING = 40000
 HASHING_ALGO = 'sha256'
 
 class Signer:
@@ -15,7 +15,7 @@ class Signer:
             return
 
         # Load keystore
-        keystore = pkcs12.load_pkcs12(data=open(pkcs12_file_name, 'rb').read(), password=passphrase)
+        keystore = pkcs12.load_pkcs12(data=open(pkcs12_file_name, 'rb').read(), password=str.encode(passphrase))
         self.private_key = keystore.key
 
         # Store all certificates of keystore as der-encoded bytes into list, needed for cms-object later
@@ -61,11 +61,6 @@ class Signer:
             # Calculate hash of file over given ByteRange
             file_hash = self.calculate_hash(file_name=output_file_name, hash_algo=HASHING_ALGO)
             cms.set_signed_attrs(digest=file_hash, privkey=self.private_key)
-
-            # Calculate signature from hash and private key
-            # signature = self.private_key.sign(data=file_hash, padding=padding.PKCS1v15(), algorithm=hashes.SHA256())
-
-            # cms.set_signature(signature)
             cms_dump = cms.dump().hex().encode('ascii')
 
             # Replace part of the /Contents entry with the correct cms-object

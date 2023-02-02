@@ -50,6 +50,7 @@ class PDFGeneratorWindow(QWidget):
         button.setFixedSize(250, 40)
         button.setIconSize(QSize(35, 35))
         self.main_layout.addWidget(button)
+
     def template_file_dialog(self):
         file_name = QFileDialog.getOpenFileName(parent=self,
                                                 caption='Select template file',
