@@ -1,5 +1,9 @@
-import pikepdf, os
+import os
+
+import pikepdf
 from pikepdf import Pdf, Rectangle
+from datetime import datetime, timezone
+
 from utils.ArgumentValidator import validate_sig_pos
 
 SIGNATURE_BOX_WIDTH = 200
@@ -88,11 +92,21 @@ class PDFWriter:
             return out_file_name
 
     def create_sig_dict(self):
+        # Get local timezone
+        local_timezone = datetime.now(timezone.utc).astimezone().tzinfo
+
+        # Get local time inside timezone
+        datetime_now = datetime.now(tz=local_timezone).strftime('%Y%m%d%H%M%S%z')
+
+        # Bring date in given format
+        datetime_now = datetime_now[0:-2] + '\'' + datetime_now[-2:] + '\''
+        datetime_now = b'D:' + str.encode(datetime_now)
         sig_dict = pikepdf.Dictionary(
             {
                 '/Type': pikepdf.Name('/Sig'),
                 '/Filter': pikepdf.Name('/Adobe.PPKLite'),
                 '/SubFilter': pikepdf.Name('/ETSI.CAdES.detached'),
+                '/M': pikepdf.String(datetime_now),
                 # Fill the Contents value with zero-padding, should be large enough to fit the CMS-SignedData object
                 '/Contents': pikepdf.String(b'\0'*self.content_padding),
                 '/ByteRange': [self.byte_range_placeholder,

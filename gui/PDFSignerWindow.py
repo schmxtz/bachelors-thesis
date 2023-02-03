@@ -76,10 +76,10 @@ class PDFSignerWindow(QWidget):
         for file_name in file_names[0]:
             self.list_widget.addItem(file_name)
         self.pdf_file_names = file_names[0]
+
     def sign_pdfs(self):
         logging.info('Signing PDFs')
 
-        print(self.pdf_file_names)
         try:
             signer = Signer(pdf_file_names=self.pdf_file_names,
                             passphrase=self.pw_box.text(),
