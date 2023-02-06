@@ -24,7 +24,9 @@
                    that have been used in this project. Should be replaced in the future.
 
 - Notes for PDF-Generation:
-    - VBS-script should stay as of now in the same directory as PDFGenerator.py
-    - There can't be any instance of Word running when executing the script
+    - VBS-script should stay in the same directory as PDFGenerator.py
     - It is necessary to give an output_path when executing the script
+
+- Notes for PDF-Signing:
+    - Password for example keystore is password
     

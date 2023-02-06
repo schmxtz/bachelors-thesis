@@ -10,10 +10,18 @@ deletePDF = WScript.Arguments(1)
 Dim wordApplication
 Dim wordDocument
 Dim wordDocuments
+Dim bstartApp
+On Error Resume Next
+
+Set wordApplication = GetObject(, "Word.Application")
+If Err Then
+    bstartApp = True
+    Set wordApplication = CreateObject("Word.Application")
+End If
+On Error GoTo 0
 
 'Set their values
 Set oFSO = CreateObject("Scripting.FileSystemObject")
-Set wordApplication = CreateObject("Word.Application")
 Set wordDocuments = wordApplication.Documents
 
 For Each oFile In oFSO.GetFolder(sFolder).Files
@@ -53,13 +61,14 @@ For Each oFile In oFSO.GetFolder(sFolder).Files
   End if
 Next
 
-SaveChanges = 0				'wdDoNotSaveChanges
-wordApplication.Quit SaveChanges
-
 Set oFSO = Nothing
-Set wordApplication = Nothing
 Set wordDocument = Nothing
 Set wordDocuments = Nothing
+
+SaveChanges = 0				'wdDoNotSaveChanges
+If bstartApp = True Then
+    wordApplication.Quit SaveChanges
+End If
 
 
 

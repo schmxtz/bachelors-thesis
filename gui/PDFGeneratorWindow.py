@@ -82,6 +82,10 @@ class PDFGeneratorWindow(QWidget):
         output_path = self.labels[2].text()
         delete_source_docx = self.is_delete_docx.isChecked()
 
+        if ' ' in output_path:
+            logging.error('Please select an output folder whose name doesn\'t contain speacial characters like spaces.')
+            return
+
         try:
             generator = PDFGenerator(template_file_name=template_file_name, excel_file_name=excel_file_name,
                                      output_path=output_path, delete_source_docx=delete_source_docx)
