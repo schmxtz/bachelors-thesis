@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QSize, Qt
 import qtawesome as qta
+from qtwidgets import PasswordEdit
 
 
 class PDFSignerWindow(QWidget):
@@ -16,12 +17,11 @@ class PDFSignerWindow(QWidget):
         self.labels = []
 
         self.setup_buttons('Select signing certificate', self.signing_cert_dialog, qta.icon('mdi6.certificate'))
-        self.setup_buttons('Select PDF files to be signed', self.pdf_files_dialog, qta.icon('fa.file-pdf-o'))
-        self.pw_box = QLineEdit()
-        self.pw_box.setEchoMode(QLineEdit.Password)
-        self.pw_box.setPlaceholderText('Certificate passphrase')
+        self.pw_box = PasswordEdit()
+        self.pw_box.setPlaceholderText('p-12 passphrase')
         self.pw_box.setFixedSize(250, 40)
         self.main_layout.addWidget(self.pw_box)
+        self.setup_buttons('Select PDF files to be signed', self.pdf_files_dialog, qta.icon('fa.file-pdf-o'))
         self.in_place = QCheckBox('Sign in place (replaces original PDF)')
         self.in_place.setChecked(True)
         self.main_layout.addWidget(self.in_place)

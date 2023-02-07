@@ -7,3 +7,4 @@ python-docx
 pyqt5
 QtAwesome
 rfc3161ng
+qtwidgets
