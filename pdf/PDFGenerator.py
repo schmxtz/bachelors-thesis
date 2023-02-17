@@ -62,7 +62,8 @@ class PDFGenerator:
     def convert_docx_to_pdf_thread(self):
         Thread(target=self.convert_docx_to_pdf).start()
 
-    def replace_text_in_paragraph(self, paragraph, parameter):
+    @staticmethod
+    def replace_text_in_paragraph(paragraph, parameter):
         line = paragraph.runs
         for word in line:
             if word.text in parameter:
@@ -73,12 +74,7 @@ class PDFGenerator:
             else:
                 # Check if the current word is a placeholder
                 if PLACEHOLDER_OPENING in word.text and PLACEHOLDER_CLOSING in word.text:
-                    # If the placeholder is part of a numbered list, delete the entire line
-                    if has_numbers(word.text):
-                        self.delete_paragraph(paragraph)
-                    # Else replace the placeholder with empty string
-                    else:
-                        word.text = word.text.replace(word.text, '')
+                    word.text = word.text.replace(word.text, '')
 
     @staticmethod
     def delete_paragraph(paragraph):
