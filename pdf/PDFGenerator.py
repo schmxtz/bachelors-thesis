@@ -82,7 +82,11 @@ class PDFGenerator:
 
         :return:
         """
-        command = 'wscript ./pdf/DocxToPdf.vbs {0} {1}'.format(self.output_path, int(self.delete_source_docx))
+        current_wcd = os.getcwd()
+        current_wcd = current_wcd.replace('\\', '/')
+        command = 'wscript {0}/pdf/DocxToPdf.vbs {1} {2}'.format(current_wcd,
+                                                                 self.output_path,
+                                                                 int(self.delete_source_docx))
         subprocess.call(command)
         logging.info('Finished converting PDFs')
 

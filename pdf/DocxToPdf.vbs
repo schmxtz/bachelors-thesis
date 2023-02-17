@@ -10,22 +10,30 @@ deletePDF = WScript.Arguments(1)
 Dim wordApplication
 Dim wordDocument
 Dim wordDocuments
+Dim bstartApp
+On Error Resume Next
+
+Set wordApplication = GetObject(, "Word.Application")
+If Err Then
+    bstartApp = True
+    Set wordApplication = CreateObject("Word.Application")
+End If
+On Error GoTo 0
 
 'Set their values
 Set oFSO = CreateObject("Scripting.FileSystemObject")
-Set wordApplication = CreateObject("Word.Application")
 Set wordDocuments = wordApplication.Documents
 
 For Each oFile In oFSO.GetFolder(sFolder).Files
   If UCase(oFSO.GetExtensionName(oFile.Name)) = "DOCX" Then
 	documentFile = sFolder + "\" + oFile.Name
 	pdfOutputFile = sFolder + "\" + oFSO.GetBaseName(oFile.Name) + ".pdf"
-	
+
 	' Disable any potential macros of the word document.
 	wordApplication.WordBasic.DisableAutoMacros
-	
+
 	Set wordDocument = wordDocuments.Open(documentFile)
-	
+
 	'Arguments for the export Call
 	OutputFileName = pdfOutputFile
 	ExportFormat = 17 			'wdExportFormatPDF
@@ -41,11 +49,11 @@ For Each oFile In oFSO.GetFolder(sFolder).Files
 	BitmapMissingFonts = True
 	UseISO19005_1 = True
 	wordDocument.ExportAsFixedFormat OutputFileName, ExportFormat, OpenAfterExport, OptimizeFor, Range, DocFrom, DocTo, Item, IncludeDocProps, KeepIRM, CreateBookmarks, BitmapMissingFonts, UseISO19005_1
-	
+
 	'Close document
 	SaveChanges = 0				'wdDoNotSaveChanges
 	wordDocument.Close SaveChanges
-	
+
 	'Clean up source .docx file if deletePDF is set to 1
 	If deletePDF = 1 Then
 	  oFSO.DeleteFile documentFile
@@ -53,13 +61,14 @@ For Each oFile In oFSO.GetFolder(sFolder).Files
   End if
 Next
 
-SaveChanges = 0				'wdDoNotSaveChanges
-wordApplication.Quit SaveChanges
-
 Set oFSO = Nothing
-Set wordApplication = Nothing
 Set wordDocument = Nothing
 Set wordDocuments = Nothing
+
+SaveChanges = 0				'wdDoNotSaveChanges
+If bstartApp = True Then
+    wordApplication.Quit SaveChanges
+End If
 
 
 
