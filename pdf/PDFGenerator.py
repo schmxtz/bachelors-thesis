@@ -66,14 +66,13 @@ class PDFGenerator:
     def replace_text_in_paragraph(paragraph, parameter):
         line = paragraph.runs
         for word in line:
-            if word.text in parameter:
-                value = parameter.get(word.text)
-                if value is None:
-                    value = ''
-                word.text = word.text.replace(word.text, value)
-            else:
-                # Check if the current word is a placeholder
-                if PLACEHOLDER_OPENING in word.text and PLACEHOLDER_CLOSING in word.text:
+            if PLACEHOLDER_OPENING in word.text and PLACEHOLDER_CLOSING in word.text:
+                if word.text in parameter:
+                    value = parameter.get(word.text)
+                    if value is None:
+                        value = ''
+                    word.text = word.text.replace(word.text, value)
+                else:
                     word.text = word.text.replace(word.text, '')
 
     @staticmethod
