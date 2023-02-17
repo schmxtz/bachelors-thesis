@@ -24,14 +24,13 @@ class PDFGenerator:
 
         self.delete_source_docx = delete_source_docx
         self.parameters = None
-        self.header = None
 
     def parse_excel_file(self):
-        self.parameters, self.header = parse_excel_file(self.excel_file_name)
+        self.parameters = parse_excel_file(self.excel_file_name)
 
     def replace_parameters(self):
         logging.info('Creating word files... (0/{0})'.format(len(self.parameters)))
-        if self.parameters is None or self.header is None:
+        if self.parameters is None:
             return
         ctr = 1
         len_params = len(self.parameters)
