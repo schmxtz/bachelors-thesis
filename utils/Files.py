@@ -69,4 +69,4 @@ def parse_excel_file(file_name: str):
         parsed_rows.append(parsed_row)
 
     # header_row is unpacked into its values with list comprehension
-    return parsed_rows, [header.value for header in header_row]
+    return parsed_rows
