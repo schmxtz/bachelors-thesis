@@ -22,6 +22,9 @@
     - python-docx: Library to replace the placeholders inside the .docx files and save them as new documents. Library 
                    hasn't been updated in a year and doesn't state it supports Python 3.9, but it works for the features
                    that have been used in this project. Should be replaced in the future.
+    - pyqt5: Library for GUI
+    - QtAwesome: Library for icons used in GUI
+    - qtwidgets: Library used for hidden password input
 
 - Notes for PDF-Generation:
     - VBS-script should stay in the same directory as PDFGenerator.py

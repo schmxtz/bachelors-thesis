@@ -61,22 +61,25 @@ class PDFWriter:
         # Content padding times 2 because it's saved as hex string -> 1 byte == 2 hex chars -> 2 byte (in file)
         size_in_bytes_with_signature = size_in_bytes + self.content_padding * 2
         number_of_digits = len(str(size_in_bytes_with_signature)) - 1
+        # This has to be done this way, because pikepdf would turn the number 0000000 into 0 when saving, it has to be
+        # a number with the given number of digits
         self.byte_range_placeholder = pow(10, number_of_digits)
+
         self.sig_dict_obj = None
-        self.annot_dict_obj = None
+        self.sig_field_dict = None
         self.sig_field_dict_obj = None
 
         # Create dictionaries necessary for a valid signature
         self.create_sig_dict()
-        self.create_annot_dict()
         self.create_sig_field_dict()
+        self.create_interactive_form_dict()
 
         # Annots might not exist on desired page
         if not '/Annots' in self.doc.pages[self.page_index]:
             self.doc.pages[self.page_index].Annots = pikepdf.Array()
 
         # Add reference to annotation dict to the annotations array for this page
-        self.doc.pages[self.page_index].Annots.append(self.doc.make_indirect(self.annot_dict_obj))
+        self.doc.pages[self.page_index].Annots.append(self.doc.make_indirect(self.sig_field_dict))
 
         # Add reference to AcroForm entry in Root dictionary
         self.doc.Root['/AcroForm'] = self.doc.make_indirect(self.sig_field_dict_obj)
@@ -84,14 +87,18 @@ class PDFWriter:
 
     def save(self):
         if self.in_place:
-            self.doc.save(self.file_name, normalize_content=False)
+            self.doc.save(self.file_name)
             return self.file_name
         else:
             out_file_name = self.file_name[:-4] + '_signed.pdf'
-            self.doc.save(out_file_name, normalize_content=False)
+            self.doc.save(out_file_name)
             return out_file_name
 
     def create_sig_dict(self):
+        """
+        Creates the signature dictionary with padded contents entry and placeholders for ByteRange values. SigDict is
+        specified in ISO32000 (PDF 1.7) ch. 12.8.1 Table 252
+        """
         # Get local timezone
         local_timezone = datetime.now(timezone.utc).astimezone().tzinfo
 
@@ -117,8 +124,19 @@ class PDFWriter:
         )
         self.sig_dict_obj = self.doc.make_indirect(sig_dict)
 
-    def create_annot_dict(self):
-        annot_dict = pikepdf.Dictionary(
+    def create_sig_field_dict(self):
+        form_dict = pikepdf.Dictionary(
+            {
+                '/Subtype': pikepdf.Name('/Form'),
+                '/BBox': [0, 0, 200, 50],
+                '/Resources': pikepdf.Dictionary()
+            }
+        )
+
+        appearance_stream = pikepdf.Stream(self.doc, b'BT /F0 10 Tf 1 0 0 1 1.66 40.6533333 Tm (Digitally signed)Tj ET',
+                                           form_dict)
+
+        sig_field_dict = pikepdf.Dictionary(
             {
                 '/Type': pikepdf.Name('/Annot'),
                 '/SubType': pikepdf.Name('/Widget'),
@@ -127,29 +145,27 @@ class PDFWriter:
                 '/V': self.sig_dict_obj,
                 '/T': 'Signature1',
                 '/F': 132,
+                # '/DA': '/Helvetica 10 Tf',
                 '/P': self.doc.pages[self.page_index].obj,
                 '/AP': pikepdf.Dictionary(
                     {
-                        '/N': pikepdf.Dictionary(
-                            {
-                                '/Length': 0,
-                                '/Type': pikepdf.Name('/XObject'),
-                                '/Subtype': pikepdf.Name('/Form'),
-                                '/BBox': self.sig_pos
-                            }
-                        )
+                        '/N': appearance_stream
                     }
                 )
             }
         )
-        self.annot_dict_obj = self.doc.make_indirect(annot_dict)
+        self.sig_field_dict = self.doc.make_indirect(sig_field_dict)
 
-    def create_sig_field_dict(self):
-        sig_field_dict = pikepdf.Dictionary(
+    def create_interactive_form_dict(self):
+        """
+        Creates the interactive form dictionary as specified in ISO32000 (PDF 1.7) ch. 12.7.2 Table 218.
+        """
+
+        interactive_form_dict = pikepdf.Dictionary(
             {
-                '/Fields': pikepdf.Array([self.annot_dict_obj]),
-                '/SigFlags': 3
+                '/Fields': pikepdf.Array([self.sig_field_dict]),
+                # '/SigFlags': 1 See ISO32000 12.7.2 for more information
             }
         )
-        self.sig_field_dict_obj = self.doc.make_indirect(sig_field_dict)
+        self.sig_field_dict_obj = self.doc.make_indirect(interactive_form_dict)
 

@@ -1,8 +1,8 @@
-from asn1crypto import cms, x509, core, tsp
+from asn1crypto import cms, x509, tsp
 from collections import OrderedDict
-import hashlib
 from hashlib import sha256
-import rfc3161ng
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
 
 
 class CMSSignedData:
@@ -11,6 +11,7 @@ class CMSSignedData:
         Initializes the cms-objects with default values
         """
         self.signing_cert = None
+        self.signing_cert_raw = None
         self.asn1obj = cms.ContentInfo()
         self.asn1obj['content_type'] = 'signed_data'
         self.singed_data = cms.SignedData()
@@ -20,10 +21,14 @@ class CMSSignedData:
 
     def load_certs(self, der_encoded_certs: [bytes]):
         certs = []
+
+        # Parse raw DER-encoded certificate bytes into x509.Certificate object
         for der_encoded_cert in der_encoded_certs:
             certs.append(x509.Certificate.load(der_encoded_cert))
         self.singed_data['certificates'] = certs
         self.signing_cert = certs[0]
+
+        # Raw signing cert is later needed to calculate hash, see set_signed_attrs function
         self.signing_cert_raw = der_encoded_certs[0]
         signature_algorithm = self.signing_cert.native['signature_algorithm']['algorithm']
         issuer = self.signing_cert.native['tbs_certificate']['issuer']
@@ -41,6 +46,30 @@ class CMSSignedData:
         self.signer_info['signature'] = signature
 
     def set_signed_attrs(self, digest: bytes, privkey):
+        """
+                List of signed attributes used in a PAdES signature as specified in EN 319 122-1 - V1.2.1:
+                Required attributes:
+                    - content-type: Must be id-data ('data' as string) see EN 319 142-1 - V1.1.1 clause 6.3 c
+                    - message-digest: The message-digest of the entire document exluding the cms-object itself
+                    - signing-certificate-v2: A protection of the signing certificate shall be provided, as we don't want to use
+                                              SHA-1 for the certificate hash calculation we have to use signing-certificate-v2,
+                                              see EN 319 122-1 - V1.0.0 clause 5.2.2.2/5.2.2.3
+
+
+                Optional:
+                    - signer-attributes-v2: Won't be present as it only represents attributes set by the signing entity,
+                                            not the signature or signed content
+                    - content-time-stamp: Not yet implemented, only timestamps the document before signing
+                    - signature-policy-identifier: As no signature policy is defined, there is no need for an identifier, see
+                                                   RFC 3280 for more information about policies
+                    - commitment-type-indication: Either commitment is given in CMS or the reason is given inside the signature
+                                                  dictionary inside the PDF, we use the latter
+
+                :param digest: The digest of the entire document excluding the cms-object
+                :param privkey: The private key with which the signature is generated
+                """
+        # Calculate certificate hash used in SigningCertificateV2 attribute, any SHA2 or SHA3 hash can be used, don't
+        # use SHA-1 or MD-5
         m = sha256()
         m.update(self.signing_cert_raw)
         cert_hash = m.digest()
@@ -53,13 +82,16 @@ class CMSSignedData:
                 ('type', 'message_digest'),
                 ('values', [digest])
             ]),
+            # SigningCertificateV2 is defined in RFC 5035 clause 3
             OrderedDict([
                 ('type', 'signing_certificate_v2'),
                 ('values', [tsp.SigningCertificateV2({
                     'certs': [
+                        # ESSCertIDv2 is defined in RFC 5035 clause 4
                         tsp.ESSCertIDv2({
                             'hash_algorithm': {'algorithm': 'sha256'},
                             'cert_hash': cert_hash,
+                            # IssuerSerial is defined in RFC 5035 clause 4
                             'issuer_serial': {
                                 'issuer': [
                                     x509.GeneralName({'directory_name': self.signing_cert.issuer})
@@ -71,14 +103,11 @@ class CMSSignedData:
                 })])
             ])
         ]
-        import hashlib
-        from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PrivateFormat, \
-            KeySerializationEncryption
-        from cryptography.hazmat.primitives.asymmetric import padding, utils
-        from cryptography.hazmat.primitives import hashes
+
         data = self.signer_info['signed_attrs'].untag().dump()
         self.signer_info['signature'] = privkey.sign(data=data, padding=padding.PKCS1v15(), algorithm=hashes.SHA256())
         # self.add_timestamp_token()
+
 
     def set_digest_algorithms(self, name: str):
         self.singed_data['digest_algorithms'] = [OrderedDict([
@@ -90,34 +119,46 @@ class CMSSignedData:
             ('parameters', None)
         ])
 
-    def add_timestamp_token(self):
-        rt = rfc3161ng.RemoteTimestamper(url='http://freetsa.org/tsr', hashname='sha256')
-        hash_obj = hashlib.new('sha256')
-        hash_obj.update(self.signer_info['signature'].native)
-        signature_hash = hash_obj.digest()
-        print(signature_hash.hex())
-
-        tst = rt.timestamp(digest=signature_hash, include_tsa_certificate=False)
-
-        signature_time_stamp = cms.ContentInfo.load(tst)
-
-        self.signer_info['unsigned_attrs'] = [
-            OrderedDict([
-                ('type', 'signature_time_stamp_token'),
-                ('values', [signature_time_stamp])
-            ])
-        ]
+    # def add_timestamp_token(self):
+    #     rt = rfc3161ng.RemoteTimestamper(url='http://timestamp.digicert.com', hashname='sha256')
+    #     hash_obj = hashlib.new('sha256')
+    #     hash_obj.update(self.signer_info['signature'].native)
+    #     signature_hash = hash_obj.digest()
+    #     tst = rt.timestamp(digest=signature_hash, include_tsa_certificate=False)
+    #
+    #
+    #     signature_time_stamp = cms.ContentInfo.load(tst)
+    #
+    #     self.signer_info['unsigned_attrs'] = [
+    #         OrderedDict([
+    #             ('type', 'signature_time_stamp_token'),
+    #             ('values', [signature_time_stamp])
+    #         ])
+    #     ]
 
     def dump(self):
+        """
+        Object can only be constructed at the end, when it's properly populated.
+
+        :return:
+        """
         self.singed_data['signer_infos'] = [self.signer_info]
         self.asn1obj['content'] = self.singed_data
         return self.asn1obj.dump()
 
     def __set_version(self):
+        # TODO: Assign Version dynamically as specified in RFC 5652 section 5.1
         self.singed_data['version'] = 'v1'
         self.signer_info['version'] = 'v1'
 
     def __set_encap_content_info(self):
+        """
+        Content-type must be set to 'id-data' as specified in RFC 5652 clause 5.2 because we're calculating external
+        signatures. In this case setting it to 'data', sets it to id-data. I don't know if that's an implementation
+        error but setting it to 'id-data' doesn't work.
+
+        :return:
+        """
         self.singed_data['encap_content_info'] = OrderedDict([
             ('content_type', 'data')
         ])

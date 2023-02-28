@@ -10,7 +10,7 @@ CONTENTS_PADDING = 40000
 HASHING_ALGO = 'sha256'
 
 class Signer:
-    def __init__(self, pdf_file_names: [str], pkcs12_file_name: str, passphrase: bytes, in_place: bool = False):
+    def __init__(self, pdf_file_names: [str], pkcs12_file_name: str, passphrase: str, in_place: bool = False):
         if not pdf_file_names:
             return
 
@@ -52,7 +52,8 @@ class Signer:
                 str(self.byte_range_raw[3]).zfill(range_len)
             ).encode('utf-8')
 
-            # Replace the old placeholder ByteRange with the correct one
+            # Replace the old placeholder ByteRange with the correct one, has to be done manually because pikepdf might
+            # mess it up by shifting object
             with open(output_file_name, 'r+b') as f:
                 m = mmap.mmap(f.fileno(), 0)
                 m[byte_start:byte_end] = byte_range
