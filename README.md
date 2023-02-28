@@ -8,10 +8,6 @@
     - Make changes to comply with PAdES-baseline and additional level
     - Clean up code
     - Feature for adding image signature
-    - Check licensing
-    - Naming
-    - Version
-    - Check adobe list for group certificates
 
 - Explanation for choice of library:
     - pikepdf: Library to work with PDF files on the object-level
@@ -29,6 +25,7 @@
 - Notes for PDF-Generation:
     - VBS-script should stay in the same directory as PDFGenerator.py
     - It is necessary to give an output_path when executing the script
+    - Don't choose a folder with special characters in its name (includes spaces)
 
 - Notes for PDF-Signing:
     - Password for example keystore is password
