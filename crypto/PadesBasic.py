@@ -96,9 +96,3 @@ class PadesBasic:
                                          intermediate_certs=intermediates,
                                          validation_context=context)
         validator.validate_usage({'digital_signature'})
-
-
-# t = PadesBasic(pdf_file_names=['C:/Users/Philipp/Downloads/Bachelor/docx-test/Adams_Andreas_IT-Sicherheit_1670594727788567400.pdf'],
-#                pkcs12_file_name='C:/Users/Philipp/Downloads/Bachelor/Philipp_Schmitz_131063584_12250718473589342683760807179_2022-11-17_2025-11-16.p12',
-#                passphrase=b'FmD8(6C6'
-#                )
